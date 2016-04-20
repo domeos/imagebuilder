@@ -67,7 +67,7 @@ func (b *Buildfile) WriteFileSilent(path string, file []byte, i int) {
 // code at the start.
 var base = `
 #!/bin/bash
-set +e
+set -e
 
 if [ ! -d $HOME/.ssh ]; then
   mkdir -p $HOME/.ssh

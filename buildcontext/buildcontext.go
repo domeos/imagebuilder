@@ -3,7 +3,7 @@ package buildcontext
 import (
     "fmt"
     "imagebuilder/buildfile"
-	"strings"
+    "strings"
 )
 
 var LocalCodePath string = "/code"
@@ -32,14 +32,14 @@ type BuildContext struct {
 
     DockerfilePath string `json:"dockerfilePath"`
 
-	CodeType		string `json:"type"`
+	CodeType	  string  `json:"type"`
 }
 
 func (context *BuildContext) WriteScript() (script string) {
     f := buildfile.New()
 	f.WriteCmdSilent(fmt.Sprintf("if [ ! -d \"%s\" ]; then mkdir %s; fi", LocalCodePath, LocalCodePath))
 	f.WriteCmdSilent(fmt.Sprintf("cd %s", LocalCodePath))
-	if(strings.Contains(context.CodeType, "gitlab")) {
+	if(strings.EqualFold(context.CodeType, "gitlab")) {
 		if len(context.Idrsa) != 0 {
 			f.WriteCmdSilent(fmt.Sprintf("echo -e '%s' > $HOME/.ssh/id_rsa", context.Idrsa))
 			f.WriteCmdSilent("chmod 600 $HOME/.ssh/id_rsa")
@@ -51,7 +51,7 @@ func (context *BuildContext) WriteScript() (script string) {
 			f.WriteCmd(fmt.Sprintf("git -c core.askpass=true fetch --tags --progress %s +refs/heads/*:refs/remotes/origin/*", context.CodeUrl))
 			f.WriteCmd(fmt.Sprintf("git checkout -f %s", context.CommitId))
 		}
-	} else if(strings.Contains(context.CodeType, "subversion")) {
+	} else if(strings.EqualFold(context.CodeType, "subversion")) {
 		if len(context.CodeUrl) > 0 {
 			f.WriteCmd(fmt.Sprintf("svn --username '%s' --password '%s' --no-auth-cache checkout %s %s", context.CommitId, context.Idrsa, context.CodeUrl, context.ImageName))
 		}
@@ -69,16 +69,16 @@ func (context *BuildContext) WriteScript() (script string) {
     }
 
     if context.HasDockerfile == 0 && len(context.DockerfileUrl) > 0 {
-        f.WriteCmdSilent(fmt.Sprintf("curl --connect-timeout 60 -o %s \"%s?secret=%s\"", LocalCodePath + "/Dockerfile", context.DockerfileUrl, context.Secret))
+        f.WriteCmd(fmt.Sprintf("curl --connect-timeout 60 -o %s \"%s?secret=%s\"", LocalCodePath + "/Dockerfile", context.DockerfileUrl, context.Secret))
 //        f.WriteCmdSilent(fmt.Sprintf("curl -o %s \"%s?secret=%s\"", LocalCodePath + "/Dockerfile", context.DockerfileUrl, context.Secret))
         context.DockerfilePath = LocalCodePath
+        f.WriteCmd(fmt.Sprintf("docker build --pull -t %s %s", imageInfo, context.DockerfilePath))
     } else {
         context.BuildPath = LocalCodePath + context.BuildPath
         context.DockerfilePath = LocalCodePath + context.DockerfilePath
         f.WriteCmd(fmt.Sprintf("cd %s", context.BuildPath))
+        f.WriteCmd(fmt.Sprintf("docker build --pull -f %s -t %s %s", context.DockerfilePath, imageInfo, context.BuildPath))
     }
-
-    f.WriteCmd(fmt.Sprintf("docker build --pull -t %s %s", imageInfo, context.DockerfilePath))
 
     f.WriteCmd(fmt.Sprintf("docker push %s", imageInfo))
 
