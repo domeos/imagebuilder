@@ -4,6 +4,9 @@ import (
     "fmt"
     "imagebuilder/buildfile"
     "strings"
+"net/http"
+	"io/ioutil"
+	"time"
 )
 
 var LocalCodePath string = "/code"
@@ -28,14 +31,18 @@ type BuildContext struct {
 
     DockerfileUrl string  `json:"dockerfileUrl"`
 
+	CompilefileUrl string  `json:"compilefileUrl"`
+
     BuildPath     string  `json:"buildPath"`
 
     DockerfilePath string `json:"dockerfilePath"`
 
 	CodeType	  string  `json:"type"`
+
+	BuildType     string   `json:"buildType"`
 }
 
-func (context *BuildContext) WriteScript() (script string) {
+func (context *BuildContext) WriteScript() (script string, error error) {
     f := buildfile.New()
 	f.WriteCmdSilent(fmt.Sprintf("if [ ! -d \"%s\" ]; then mkdir %s; fi", LocalCodePath, LocalCodePath))
 	f.WriteCmdSilent(fmt.Sprintf("cd %s", LocalCodePath))
@@ -68,6 +75,27 @@ func (context *BuildContext) WriteScript() (script string) {
         imageInfo = imageInfo + ":latest"
     }
 
+	if (strings.EqualFold(context.BuildType, "java")) {
+		if len(context.CompilefileUrl) > 0 {
+			fmt.Println( context.CompilefileUrl+"?secret="+context.Secret)
+			url := fmt.Sprintf("%s?secret=%s", context.CompilefileUrl, context.Secret)
+			timeout := time.Duration(10 * time.Second)
+			client := http.Client{
+				Timeout: timeout,
+			}
+			resp, err := client.Get(url)
+			if err != nil {
+				return "", err
+			}
+			defer resp.Body.Close()
+			command, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return "", err
+			}
+			f.WriteCmdSilent(string(command))
+		}
+	}
+
     if context.HasDockerfile == 0 && len(context.DockerfileUrl) > 0 {
         f.WriteCmd(fmt.Sprintf("curl --connect-timeout 60 -o %s \"%s?secret=%s\"", LocalCodePath + "/Dockerfile", context.DockerfileUrl, context.Secret))
 //        f.WriteCmdSilent(fmt.Sprintf("curl -o %s \"%s?secret=%s\"", LocalCodePath + "/Dockerfile", context.DockerfileUrl, context.Secret))
@@ -86,5 +114,5 @@ func (context *BuildContext) WriteScript() (script string) {
     // f.WriteCmd(fmt.Sprintf("docker rmi %s", imageInfo))
 
     // f.WriteCmd(fmt.Sprintf("rm -rf %s", LocalCodePath))
-    return f.String()
+    return f.String(), nil
 }

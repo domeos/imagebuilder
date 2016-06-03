@@ -2,8 +2,10 @@ package main
 
 import (
     "imagebuilder/build"
+    "os"
 )
 
 func main() {
-    build.Main()
+    codeType := os.Getenv("TYPE")
+    build.RunOnType(codeType)
 }

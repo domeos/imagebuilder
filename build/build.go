@@ -115,7 +115,7 @@ func execScript(script string, bs *buildStatus, bc string) {
             bs.Status = Fail
             bs.Message = "init log file error"
         } else {
-            err := executor.Command("/bin/bash", ScriptFile)
+            err := executor.Command("/bin/sh", ScriptFile)
             //err = err.(syscall.Errno)
             if err != nil {
                 bs.Status = Fail
@@ -161,10 +161,9 @@ func uploadLogFile(bs *buildStatus, uploadUrl, server, secret, codeType string) 
     }
 }
 
-func Main() {
-    codeType := os.Getenv("TYPE")
-    //codeType = "BASEIMAGECUSTOM"
-    if (strings.EqualFold(codeType, "BASEIMAGECUSTOM")) {
+func RunOnType(codeType string)  {
+    switch codeType {
+    case "BASEIMAGECUSTOM":
         server := os.Getenv("SERVER")
         imageId := os.Getenv("IMAGEID")
         imageName := os.Getenv("IMAGENAME")
@@ -172,13 +171,6 @@ func Main() {
         registryUrl := os.Getenv("REGISTRYURL")
         dockerfile := os.Getenv("DOCKERFILE")
         secret := os.Getenv("SECRET")
-        //server = "http://10.2.155.41:8080"
-        //imageId = "2"
-        //imageName = "test"
-        //imageTag = "1.0"
-        //secret = "346ffead-ee10-45c6-a3f3-d914ac257a3e"
-        //dockerfile = "00e721117fa43f4367dc9ed0ec6a5159"
-        //registryUrl = "http://10.11.150.76:5000"
         buildContext := &buildcontext.BaseImageContext{server, imageId, imageName, imageTag, registryUrl, dockerfile, secret, codeType}
         bs := &buildStatus{}
         bc, _ := json.Marshal(buildContext)
@@ -199,7 +191,8 @@ func Main() {
         }
         uploadUrl := fmt.Sprintf(server + "/api/image/custom/upload/%s?secret=%s", imageId, secret)
         uploadLogFile(bs, uploadUrl, server, secret, codeType)
-    } else {
+
+    default:
         server := os.Getenv("SERVER")
         buildId, _ := strconv.Atoi(os.Getenv("BUILD_ID"))
         idrsa := os.Getenv("IDRSA")
@@ -212,20 +205,24 @@ func Main() {
         hasDockerfile, _ := strconv.Atoi(os.Getenv("HAS_DOCKERFILE"))
         secret := os.Getenv("SECRET")
         dockerfileUrl := server + "/api/ci/build/builddockerfile/" + os.Getenv("PROJECT_ID") + "/" + os.Getenv("BUILD_ID")
+        compilefileUrl := server + "/api/ci/build/compilefile/" + os.Getenv("PROJECT_ID") + "/" + os.Getenv("BUILD_ID")
         buildPath := os.Getenv("BUILD_PATH")
         dockerfilePath := os.Getenv("DOCKERFILE_PATH")
+        buildType := os.Getenv("BUILD_TYPE")
 
-        buildContext := &buildcontext.BuildContext{idrsa, codeUrl, commitId, imageName, imageTag, registryUrl, hasDockerfile, secret, dockerfileUrl, buildPath, dockerfilePath, codeType}
-        script := buildContext.WriteScript()
-        err := writeScriptFile(script)
+        buildContext := &buildcontext.BuildContext{idrsa, codeUrl, commitId, imageName, imageTag, registryUrl, hasDockerfile,
+            secret, dockerfileUrl, compilefileUrl, buildPath, dockerfilePath, codeType, buildType}
+        script, err := buildContext.WriteScript()
         bs := &buildStatus{}
         bc, _ := json.Marshal(buildContext)
         bs.BuildId = buildId
         bs.ProjectId = projectId
-        if err != nil {   //generate script file
+        if err != nil {
             bs.Status = Fail
             bs.Message = "generate ci script fail, parameter: " + string(bc)
-        } else { //write script file
+
+        } else {
+            //write script file
             err = writeScriptFile(script)
             if err != nil {
                 bs.Status = Fail
