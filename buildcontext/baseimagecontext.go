@@ -10,10 +10,7 @@ import (
 	"strings"
 )
 
-
-
 type BaseImageContext  struct {
-
 	Server      string     `json:"server"`
 
 	ImageId     string     `json:"imageId"`
@@ -28,24 +25,21 @@ type BaseImageContext  struct {
 
 	Secret      string     `json:"secret"`
 
-	CodeType	string     `json:"codeType"`
-
-
+	CodeType    string     `json:"codeType"`
 }
 
 type FileInfo struct {
-	FileName      string
-	FilePath      string
-	Md5       string
+	FileName string
+	FilePath string
+	Md5      string
 }
 
 type FileSlice struct {
 	Files []FileInfo
 }
 
-
 func writeFile(filecontent, filename string) error {
-	fout, err := os.Create(LocalCodePath+filename)
+	fout, err := os.Create(LocalCodePath + filename)
 	if err != nil {
 		fmt.Println("create script file error,", err.Error())
 		return err
@@ -80,7 +74,7 @@ func (context *BaseImageContext) WriteBaseImageScript() (script string, error er
 
 	if len(context.RegistryUrl) > 0 {
 		imageInfo = strings.TrimPrefix(context.RegistryUrl, "http://")
-		imageInfo = strings.TrimPrefix(imageInfo, "https://")+ "/"
+		imageInfo = strings.TrimPrefix(imageInfo, "https://") + "/"
 	}
 	imageInfo = imageInfo + context.ImageName
 	if len(context.ImageTag) > 0 {

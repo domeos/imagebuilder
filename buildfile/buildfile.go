@@ -1,18 +1,18 @@
 package buildfile
 
 import (
-    "bytes"
-    "fmt"
+	"bytes"
+	"fmt"
 )
 
 type Buildfile struct {
-    bytes.Buffer
+	bytes.Buffer
 }
 
 func New() *Buildfile {
-    b := Buildfile{}
-    b.WriteString(base)
-    return &b
+	b := Buildfile{}
+	b.WriteString(base)
+	return &b
 }
 
 // WriteCmd writes a command to the build file. The
@@ -20,22 +20,22 @@ func New() *Buildfile {
 // command so that it can be parsed and appended to
 // the build output
 func (b *Buildfile) WriteCmd(command string) {
-    // echo the command as an encoded value
-    b.WriteString(fmt.Sprintf("echo '#DOME:%s'\n", command))
-    // and then run the command
-    b.WriteString(fmt.Sprintf("%s\n", command))
+	// echo the command as an encoded value
+	b.WriteString(fmt.Sprintf("echo '#DOME:%s'\n", command))
+	// and then run the command
+	b.WriteString(fmt.Sprintf("%s\n", command))
 }
 
 // WriteCmdSilent writes a command to the build file
 // but does not echo the command.
 func (b *Buildfile) WriteCmdSilent(command string) {
-    b.WriteString(fmt.Sprintf("%s\n", command))
+	b.WriteString(fmt.Sprintf("%s\n", command))
 }
 
 // WriteComment adds a comment to the build file. This
 // is really only used internally for debugging purposes.
 func (b *Buildfile) WriteComment(comment string) {
-    b.WriteString(fmt.Sprintf("#%s\n", comment))
+	b.WriteString(fmt.Sprintf("#%s\n", comment))
 }
 
 // WriteEnv exports the environment variable as
@@ -43,24 +43,24 @@ func (b *Buildfile) WriteComment(comment string) {
 // are not echoed back to the console, and are
 // kept private by default.
 func (b *Buildfile) WriteEnv(key, value string) {
-    b.WriteString(fmt.Sprintf("export %s=%q\n", key, value))
+	b.WriteString(fmt.Sprintf("export %s=%q\n", key, value))
 }
 
 // WriteHost adds an entry to the /etc/hosts file.
 func (b *Buildfile) WriteHost(mapping string) {
-    b.WriteCmdSilent(fmt.Sprintf("[ -f /usr/bin/sudo ] || echo %q | tee -a /etc/hosts", mapping))
-    b.WriteCmdSilent(fmt.Sprintf("[ -f /usr/bin/sudo ] && echo %q | sudo tee -a /etc/hosts", mapping))
+	b.WriteCmdSilent(fmt.Sprintf("[ -f /usr/bin/sudo ] || echo %q | tee -a /etc/hosts", mapping))
+	b.WriteCmdSilent(fmt.Sprintf("[ -f /usr/bin/sudo ] && echo %q | sudo tee -a /etc/hosts", mapping))
 }
 
 // WriteFile add files as part of the script.
 func (b *Buildfile) WriteFile(path string, file []byte, i int) {
-    b.WriteString(fmt.Sprintf("echo '%s' | tee %s > /dev/null\n", string(file), path))
-    b.WriteCmdSilent(fmt.Sprintf("chmod %d %s", i, path))
+	b.WriteString(fmt.Sprintf("echo '%s' | tee %s > /dev/null\n", string(file), path))
+	b.WriteCmdSilent(fmt.Sprintf("chmod %d %s", i, path))
 }
 
 // WriteFile add files as part of the script.
 func (b *Buildfile) WriteFileSilent(path string, file []byte, i int) {
-    b.WriteCmdSilent(fmt.Sprintf("chmod %d %s", i, path))
+	b.WriteCmdSilent(fmt.Sprintf("chmod %d %s", i, path))
 }
 
 // every build script starts with the following
@@ -71,6 +71,10 @@ set -e
 
 if [ ! -d $HOME/.ssh ]; then
   mkdir -p $HOME/.ssh
+fi
+
+if [ ! -d $HOME/.docker ]; then
+  mkdir -p $HOME/.docker
 fi
 
 chmod 0700 $HOME/.ssh
